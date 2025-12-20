@@ -1,14 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import Logo from "../../../components/Logo/Logo";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import useAuth from "../../../hooks/useAuth";
-import { imageUpload, bloodGroups } from "../../../utils";
-import LoadingButton from "../../../components/Button/LoadingButton";
+import toast from "react-hot-toast";
+import useAuth from "../../hooks/useAuth"; // adjust path if needed
 
-const Register = () => {
-  const [serverError, setServerError] = useState("");
-  const [uploading, setUploading] = useState(false);
+// ✅ import these from your utils file where you wrote imageUpload
+import { bloodGroups, imageUpload } from "../../utils"; // <-- adjust path
+
+const CreateDonationRequest = () => {
+  const { user } = useAuth();
 
   const [districtsData, setDistrictsData] = useState([]);
   const [upazilasData, setUpazilasData] = useState([]);
@@ -19,26 +18,35 @@ const Register = () => {
   const [districtActiveIndex, setDistrictActiveIndex] = useState(0);
   const [upazilaActiveIndex, setUpazilaActiveIndex] = useState(0);
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  const { createUser, updateUserProfile } = useAuth();
-
-  const location = useLocation();
-  const navigate = useNavigate();
+  // ✅ image states
+  const [imageFile, setImageFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
 
   const {
     register,
     handleSubmit,
     watch,
     setValue,
+    reset,
     formState: { errors },
-  } = useForm();
+  } = useForm({
+    defaultValues: {
+      recipientName: "",
+      bloodGroup: "",
+      district: "",
+      upazila: "",
+      hospitalName: "",
+      fullAddress: "",
+      donationDate: "",
+      donationTime: "",
+      requestMessage: "",
+    },
+  });
 
   const selectedDistrictId = watch("district");
   const selectedUpazila = watch("upazila");
-  const passwordValue = watch("password");
 
+  // Load districts/upazilas
   useEffect(() => {
     fetch("/data/districts.json")
       .then((res) => res.json())
@@ -80,64 +88,17 @@ const Register = () => {
     );
   }, [upazilaSearch, districtUpazilas]);
 
-  // just alias it
-  const uploadToImgBB = imageUpload;
-
-  const handleRegistration = async (data) => {
-    setServerError("");
-    setUploading(true);
-
-    try {
-      const file = data.avatar?.[0];
-      if (!file) {
-        setServerError("Avatar image is required");
-        setUploading(false);
-        return;
-      }
-
-      // 1) Create user in Firebase Auth
-      await createUser(data.email, data.password);
-
-      // 2) Upload avatar to ImgBB
-      const avatarUrl = await imageUpload(file);
-
-      // 3) Update Firebase profile
-      await updateUserProfile(data.name, avatarUrl);
-
-      // 4) optional payload (for DB later)
-      const userPayload = {
-        name: data.name,
-        email: data.email,
-        avatar: avatarUrl,
-        bloodGroup: data.bloodGroup,
-        district: selectedDistrictObj?.name || "",
-        upazila: data.upazila,
-        role: "donor",
-        status: "active",
-      };
-
-      console.log("✅ Final user payload:", userPayload);
-
-      navigate(location.state?.from || "/", { replace: true });
-    } catch (err) {
-      console.error("Registration error:", err);
-      setServerError(err?.message || "Registration failed");
-    } finally {
-      setUploading(false);
-    }
-  };
-
   const openDistrictModal = () => {
     setDistrictSearch("");
     setDistrictActiveIndex(0);
-    document.getElementById("district_modal").showModal();
+    document.getElementById("district_modal")?.showModal();
     setTimeout(() => document.getElementById("district_listbox")?.focus(), 0);
   };
 
   const openUpazilaModal = () => {
     setUpazilaSearch("");
     setUpazilaActiveIndex(0);
-    document.getElementById("upazila_modal").showModal();
+    document.getElementById("upazila_modal")?.showModal();
     setTimeout(() => document.getElementById("upazila_listbox")?.focus(), 0);
   };
 
@@ -151,81 +112,128 @@ const Register = () => {
     setValue("upazila", u.name);
   };
 
+  // If later you store status in DB and load it into context, this will work.
+  const isBlocked = user?.status === "blocked";
+
+  // ✅ make submit async because we will upload image
+  const onSubmit = async (data) => {
+    if (isBlocked) {
+      toast.error("You are blocked. You cannot create donation requests.");
+      return;
+    }
+
+    // ✅ optional/required image rule (choose what you want)
+    // If you want image REQUIRED, uncomment:
+    // if (!imageFile) return toast.error("Please upload a recipient image.");
+
+    try {
+      setUploading(true);
+
+      // ✅ upload image if selected
+      let recipientImage = "";
+      if (imageFile) {
+        recipientImage = await imageUpload(imageFile);
+      }
+
+      // Build payload according to requirement (status must be pending initially)
+      const payload = {
+        requesterName: user?.displayName || "Unknown",
+        requesterEmail: user?.email || "Unknown",
+
+        recipientName: data.recipientName,
+        recipientImage, // ✅ added
+
+        bloodGroup: data.bloodGroup,
+        recipientDistrict: selectedDistrictObj?.name || "",
+        recipientUpazila: data.upazila,
+        hospitalName: data.hospitalName,
+        fullAddress: data.fullAddress,
+        donationDate: data.donationDate,
+        donationTime: data.donationTime,
+        requestMessage: data.requestMessage,
+
+        status: "pending",
+        donorName: null,
+        donorEmail: null,
+        createdAt: new Date().toISOString(),
+      };
+
+      console.log("✅ Donation Request Payload (NOT sent to DB yet):", payload);
+      toast.success("Donation request created (image uploaded).");
+
+      // reset form
+      reset();
+      setValue("district", "");
+      setValue("upazila", "");
+      setImageFile(null);
+    } catch (err) {
+      toast.error(err?.message || "Something went wrong");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
-    <section className="min-h-screen bg-base-200 flex items-center justify-center px-6 py-10">
-      <div className="w-full max-w-xl">
-        <div className="rounded-3xl border border-base-300 bg-base-100 shadow-sm overflow-hidden">
-          {/* Header */}
-          <div className="space-y-4 text-center flex flex-col items-center">
-            <Logo />
-            <div className="p-6 md:p-2 border-b border-base-300">
-              <h2 className="text-3xl font-extrabold">
-                Create your <span className="text-primary">donor</span> account
-              </h2>
-              <p className="mt-2 text-sm text-base-content/70">
-                Default role: <b>donor</b> • Status: <b>active</b>
-              </p>
-            </div>
+    <div className="max-w-3xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold">
+          Create Donation Request
+        </h1>
+        <p className="text-sm text-base-content/70 mt-1">
+          Fill out the form. Request status will be <b>pending</b>.
+        </p>
+        {isBlocked && (
+          <div className="alert alert-error mt-4">
+            <span>You are blocked. You cannot create donation requests.</span>
           </div>
+        )}
+      </div>
 
-          {/* Form */}
-          <form
-            onSubmit={handleSubmit(handleRegistration)}
-            className="p-6 md:p-8 space-y-4"
-          >
-            {/* Name */}
+      <div className="card bg-base-100 shadow-sm border border-base-300">
+        <div className="card-body">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {/* Recipient Name */}
             <div>
-              <label className="label">Name</label>
+              <label className="label">Recipient Name</label>
               <input
-                type="text"
-                {...register("name", { required: "Name is required" })}
-                className="input input-bordered w-full rounded-2xl"
-                placeholder="Your full name"
+                className="input input-bordered w-full"
+                placeholder="Who will receive the blood?"
+                {...register("recipientName", {
+                  required: "Recipient name is required",
+                })}
               />
-              {errors.name && (
+              {errors.recipientName && (
                 <p className="text-red-500 text-sm mt-1">
-                  {errors.name.message}
+                  {errors.recipientName.message}
                 </p>
               )}
             </div>
 
-            {/* Email */}
+            {/* ✅ Recipient Image */}
             <div>
-              <label className="label">Email</label>
+              <label className="label">Recipient Image (optional)</label>
               <input
-                type="email"
-                {...register("email", { required: "Email is required" })}
-                className="input input-bordered w-full rounded-2xl"
-                placeholder="Email"
+                type="file"
+                accept="image/*"
+                className="file-input file-input-bordered w-full"
+                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
               />
-              {errors.email && (
-                <p className="text-red-500 text-sm mt-1">
-                  {errors.email.message}
+              {imageFile && (
+                <p className="text-xs text-base-content/70 mt-1">
+                  Selected: <b>{imageFile.name}</b>
                 </p>
               )}
             </div>
 
-            {/* Avatar */}
-            <label className="label mt-3">Image Upload</label>
-            <input
-              type="file"
-              accept="image/*"
-              {...register("avatar", { required: "Avatar image is required" })}
-              className="file-input file-input-bordered w-full"
-            />
-            <p className="text-xs text-base-content/60 mt-1">
-              Upload your profile photo (required)
-            </p>
-
-            {/* Blood group */}
+            {/* Blood Group */}
             <div>
               <label className="label">Blood Group</label>
               <select
-                className="select select-bordered w-full rounded-2xl"
+                className="select select-bordered w-full"
+                defaultValue=""
                 {...register("bloodGroup", {
                   required: "Blood group is required",
                 })}
-                defaultValue=""
               >
                 <option value="" disabled>
                   Select blood group
@@ -245,16 +253,15 @@ const Register = () => {
 
             {/* District */}
             <div>
-              <label className="label">District</label>
+              <label className="label">Recipient District</label>
+
               <button
                 type="button"
-                className="btn btn-outline w-full justify-between rounded-2xl"
+                className="btn btn-outline w-full justify-between"
                 onClick={openDistrictModal}
               >
                 <span className="truncate">
-                  {selectedDistrictObj
-                    ? selectedDistrictObj.name
-                    : "Select district"}
+                  {selectedDistrictObj ? selectedDistrictObj.name : "Select district"}
                 </span>
                 <span className="opacity-60">Search</span>
               </button>
@@ -269,10 +276,10 @@ const Register = () => {
                 </p>
               )}
 
-              {/* District modal */}
               <dialog id="district_modal" className="modal">
                 <div className="modal-box rounded-3xl">
                   <h3 className="font-bold text-lg">Select District</h3>
+
                   <input
                     className="input input-bordered w-full rounded-full mt-3"
                     placeholder="Type district name..."
@@ -282,6 +289,7 @@ const Register = () => {
                       setDistrictActiveIndex(0);
                     }}
                   />
+
                   <div className="mt-3 max-h-72 overflow-auto border border-base-300 rounded-2xl p-2">
                     <ul
                       id="district_listbox"
@@ -294,15 +302,13 @@ const Register = () => {
                           );
                         }
                         if (e.key === "ArrowUp") {
-                          setDistrictActiveIndex((prev) =>
-                            Math.max(prev - 1, 0)
-                          );
+                          setDistrictActiveIndex((prev) => Math.max(prev - 1, 0));
                         }
                         if (e.key === "Enter") {
                           const d = filteredDistricts[districtActiveIndex];
                           if (d) {
                             selectDistrict(d);
-                            document.getElementById("district_modal").close();
+                            document.getElementById("district_modal")?.close();
                           }
                         }
                       }}
@@ -311,16 +317,15 @@ const Register = () => {
                         <li key={d.id}>
                           <button
                             type="button"
-                            className={`w-full text-left px-4 py-3 rounded-2xl transition
-                              ${
-                                districtActiveIndex === index
-                                  ? "bg-primary text-white"
-                                  : "hover:bg-base-200"
-                              }`}
+                            className={`w-full text-left px-4 py-3 rounded-2xl transition ${
+                              districtActiveIndex === index
+                                ? "bg-primary text-white"
+                                : "hover:bg-base-200"
+                            }`}
                             onMouseEnter={() => setDistrictActiveIndex(index)}
                             onClick={() => {
                               selectDistrict(d);
-                              document.getElementById("district_modal").close();
+                              document.getElementById("district_modal")?.close();
                             }}
                           >
                             <div className="font-medium">{d.name}</div>
@@ -344,7 +349,7 @@ const Register = () => {
                       type="button"
                       className="btn rounded-2xl"
                       onClick={() =>
-                        document.getElementById("district_modal").close()
+                        document.getElementById("district_modal")?.close()
                       }
                     >
                       Close
@@ -355,9 +360,7 @@ const Register = () => {
                 <button
                   type="button"
                   className="modal-backdrop"
-                  onClick={() =>
-                    document.getElementById("district_modal").close()
-                  }
+                  onClick={() => document.getElementById("district_modal")?.close()}
                 >
                   close
                 </button>
@@ -366,10 +369,11 @@ const Register = () => {
 
             {/* Upazila */}
             <div>
-              <label className="label">Upazila</label>
+              <label className="label">Recipient Upazila</label>
+
               <button
                 type="button"
-                className="btn btn-outline w-full justify-between rounded-2xl"
+                className="btn btn-outline w-full justify-between"
                 disabled={!selectedDistrictId}
                 onClick={openUpazilaModal}
               >
@@ -393,15 +397,12 @@ const Register = () => {
                 </p>
               )}
 
-              {/* Upazila modal */}
               <dialog id="upazila_modal" className="modal">
                 <div className="modal-box rounded-3xl">
                   <h3 className="font-bold text-lg">
                     Select Upazila{" "}
                     <span className="text-base-content/60 font-normal">
-                      {selectedDistrictObj
-                        ? `• ${selectedDistrictObj.name}`
-                        : ""}
+                      {selectedDistrictObj ? `• ${selectedDistrictObj.name}` : ""}
                     </span>
                   </h3>
 
@@ -435,7 +436,7 @@ const Register = () => {
                           const u = filteredUpazilas[upazilaActiveIndex];
                           if (u) {
                             selectUpazila(u);
-                            document.getElementById("upazila_modal").close();
+                            document.getElementById("upazila_modal")?.close();
                           }
                         }
                       }}
@@ -444,16 +445,15 @@ const Register = () => {
                         <li key={u.id}>
                           <button
                             type="button"
-                            className={`w-full text-left px-4 py-3 rounded-2xl transition
-                              ${
-                                upazilaActiveIndex === index
-                                  ? "bg-primary text-white"
-                                  : "hover:bg-base-200"
-                              }`}
+                            className={`w-full text-left px-4 py-3 rounded-2xl transition ${
+                              upazilaActiveIndex === index
+                                ? "bg-primary text-white"
+                                : "hover:bg-base-200"
+                            }`}
                             onMouseEnter={() => setUpazilaActiveIndex(index)}
                             onClick={() => {
                               selectUpazila(u);
-                              document.getElementById("upazila_modal").close();
+                              document.getElementById("upazila_modal")?.close();
                             }}
                           >
                             <div className="font-medium">{u.name}</div>
@@ -482,9 +482,7 @@ const Register = () => {
                     <button
                       type="button"
                       className="btn rounded-2xl"
-                      onClick={() =>
-                        document.getElementById("upazila_modal").close()
-                      }
+                      onClick={() => document.getElementById("upazila_modal")?.close()}
                     >
                       Close
                     </button>
@@ -494,120 +492,102 @@ const Register = () => {
                 <button
                   type="button"
                   className="modal-backdrop"
-                  onClick={() =>
-                    document.getElementById("upazila_modal").close()
-                  }
+                  onClick={() => document.getElementById("upazila_modal")?.close()}
                 >
                   close
                 </button>
               </dialog>
             </div>
 
-            {/* Password */}
+            {/* Hospital Name */}
             <div>
-              <label className="label">Password</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  {...register("password", {
-                    required: "Password is required",
-                    minLength: {
-                      value: 6,
-                      message: "Password must be at least 6 characters long",
-                    },
-                    pattern: {
-                      value:
-                        /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{6,}$/,
-                      message:
-                        "Must include letter, number, and special character",
-                    },
-                  })}
-                  className="input input-bordered w-full rounded-2xl pr-16"
-                  placeholder="Password"
-                />
-
-                <button
-                  type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-sm link link-hover"
-                  onClick={() => setShowPassword((p) => !p)}
-                >
-                  {showPassword ? "Hide" : "Show"}
-                </button>
-              </div>
-
-              {errors.password && (
+              <label className="label">Hospital Name</label>
+              <input
+                className="input input-bordered w-full"
+                placeholder="e.g., Dhaka Medical College Hospital"
+                {...register("hospitalName", { required: "Hospital name is required" })}
+              />
+              {errors.hospitalName && (
                 <p className="text-red-500 text-sm mt-1">
-                  {errors.password.message}
+                  {errors.hospitalName.message}
                 </p>
               )}
             </div>
 
-            {/* Confirm password */}
+            {/* Full Address */}
             <div>
-              <label className="label">Confirm Password</label>
-              <div className="relative">
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  {...register("confirm_password", {
-                    required: "Confirm password is required",
-                    validate: (value) =>
-                      value === passwordValue || "Passwords do not match",
-                  })}
-                  className="input input-bordered w-full rounded-2xl pr-16"
-                  placeholder="Confirm password"
-                />
-
-                <button
-                  type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-sm link link-hover"
-                  onClick={() => setShowConfirmPassword((p) => !p)}
-                >
-                  {showConfirmPassword ? "Hide" : "Show"}
-                </button>
-              </div>
-
-              {errors.confirm_password && (
+              <label className="label">Full Address</label>
+              <input
+                className="input input-bordered w-full"
+                placeholder="Full address (road, area, etc.)"
+                {...register("fullAddress", { required: "Full address is required" })}
+              />
+              {errors.fullAddress && (
                 <p className="text-red-500 text-sm mt-1">
-                  {errors.confirm_password.message}
+                  {errors.fullAddress.message}
                 </p>
               )}
             </div>
 
-            {serverError && (
-              <p className="text-red-500 text-sm">{serverError}</p>
-            )}
+            {/* Date + Time */}
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="label">Donation Date</label>
+                <input
+                  type="date"
+                  className="input input-bordered w-full"
+                  {...register("donationDate", { required: "Donation date is required" })}
+                />
+                {errors.donationDate && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.donationDate.message}
+                  </p>
+                )}
+              </div>
 
-            {/* <button
-              type="submit"
-              className="btn btn-primary w-full rounded-2xl"
-              disabled={uploading}
-            >
-              {uploading ? "Creating..." : "Register"}
-            </button> */}
+              <div>
+                <label className="label">Donation Time</label>
+                <input
+                  type="time"
+                  className="input input-bordered w-full"
+                  {...register("donationTime", { required: "Donation time is required" })}
+                />
+                {errors.donationTime && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.donationTime.message}
+                  </p>
+                )}
+              </div>
+            </div>
 
-            <LoadingButton
+            {/* Request Message */}
+            <div>
+              <label className="label">Request Message</label>
+              <textarea
+                className="textarea textarea-bordered w-full min-h-[120px]"
+                placeholder="Write why blood is needed, patient info, emergency note..."
+                {...register("requestMessage", { required: "Request message is required" })}
+              />
+              {errors.requestMessage && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.requestMessage.message}
+                </p>
+              )}
+            </div>
+
+            <button
               type="submit"
-              loading={uploading}
               className="btn btn-primary w-full"
+              disabled={isBlocked || uploading}
+              title={isBlocked ? "Blocked users cannot create requests" : ""}
             >
-              Register
-            </LoadingButton>
-
-            <p className="mt-4 text-sm text-base-content/70">
-              Already have an account?{" "}
-              <Link
-                state={location.state}
-                to="/login"
-                className="link link-hover text-primary font-semibold"
-              >
-                Login
-              </Link>
-            </p>
+              {uploading ? "Uploading & Creating..." : "Create Request"}
+            </button>
           </form>
         </div>
       </div>
-    </section>
+    </div>
   );
 };
 
-export default Register;
+export default CreateDonationRequest;
