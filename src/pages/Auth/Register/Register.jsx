@@ -5,6 +5,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import useAuth from "../../../hooks/useAuth";
 import { imageUpload, bloodGroups } from "../../../utils";
 import LoadingButton from "../../../components/Button/LoadingButton";
+import axiosPublic from "../../../api/axiosPublic";
 
 const Register = () => {
   const [serverError, setServerError] = useState("");
@@ -80,31 +81,29 @@ const Register = () => {
     );
   }, [upazilaSearch, districtUpazilas]);
 
-  // just alias it
-  const uploadToImgBB = imageUpload;
-
   const handleRegistration = async (data) => {
     setServerError("");
+
+    // ✅ Validate avatar before starting async flow
+    const file = data.avatar?.[0];
+    if (!file) {
+      setServerError("Avatar image is required");
+      return;
+    }
+
     setUploading(true);
 
     try {
-      const file = data.avatar?.[0];
-      if (!file) {
-        setServerError("Avatar image is required");
-        setUploading(false);
-        return;
-      }
-
-      // 1) Create user in Firebase Auth
+      // ✅ 1) Create user in Firebase
       await createUser(data.email, data.password);
 
-      // 2) Upload avatar to ImgBB
+      // ✅ 2) Upload avatar to ImgBB
       const avatarUrl = await imageUpload(file);
 
-      // 3) Update Firebase profile
+      // ✅ 3) Update Firebase profile
       await updateUserProfile(data.name, avatarUrl);
 
-      // 4) optional payload (for DB later)
+      // ✅ 4) Save/Upsert user to DB (PUT /users)
       const userPayload = {
         name: data.name,
         email: data.email,
@@ -112,16 +111,26 @@ const Register = () => {
         bloodGroup: data.bloodGroup,
         district: selectedDistrictObj?.name || "",
         upazila: data.upazila,
-        role: "donor",
-        status: "active",
       };
 
-      console.log("✅ Final user payload:", userPayload);
+      await axiosPublic.put("/users", userPayload);
+
+      // ✅ 5) Get Custom JWT from backend (POST /jwt)
+      const jwtRes = await axiosPublic.post("/jwt", { email: data.email });
+      const token = jwtRes?.data?.token;
+
+      if (!token) {
+        throw new Error("JWT token not received");
+      }
+
+      localStorage.setItem("access-token", token);
 
       navigate(location.state?.from || "/", { replace: true });
     } catch (err) {
       console.error("Registration error:", err);
-      setServerError(err?.message || "Registration failed");
+      const msg =
+        err?.response?.data?.message || err?.message || "Registration failed";
+      setServerError(msg);
     } finally {
       setUploading(false);
     }
@@ -206,16 +215,25 @@ const Register = () => {
             </div>
 
             {/* Avatar */}
-            <label className="label mt-3">Image Upload</label>
-            <input
-              type="file"
-              accept="image/*"
-              {...register("avatar", { required: "Avatar image is required" })}
-              className="file-input file-input-bordered w-full"
-            />
-            <p className="text-xs text-base-content/60 mt-1">
-              Upload your profile photo (required)
-            </p>
+            <div>
+              <label className="label mt-3">Image Upload</label>
+              <input
+                type="file"
+                accept="image/*"
+                {...register("avatar", {
+                  required: "Avatar image is required",
+                })}
+                className="file-input file-input-bordered w-full"
+              />
+              <p className="text-xs text-base-content/60 mt-1">
+                Upload your profile photo (required)
+              </p>
+              {errors.avatar && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.avatar.message}
+                </p>
+              )}
+            </div>
 
             {/* Blood group */}
             <div>
@@ -273,6 +291,7 @@ const Register = () => {
               <dialog id="district_modal" className="modal">
                 <div className="modal-box rounded-3xl">
                   <h3 className="font-bold text-lg">Select District</h3>
+
                   <input
                     className="input input-bordered w-full rounded-full mt-3"
                     placeholder="Type district name..."
@@ -282,6 +301,7 @@ const Register = () => {
                       setDistrictActiveIndex(0);
                     }}
                   />
+
                   <div className="mt-3 max-h-72 overflow-auto border border-base-300 rounded-2xl p-2">
                     <ul
                       id="district_listbox"
@@ -311,12 +331,11 @@ const Register = () => {
                         <li key={d.id}>
                           <button
                             type="button"
-                            className={`w-full text-left px-4 py-3 rounded-2xl transition
-                              ${
-                                districtActiveIndex === index
-                                  ? "bg-primary text-white"
-                                  : "hover:bg-base-200"
-                              }`}
+                            className={`w-full text-left px-4 py-3 rounded-2xl transition ${
+                              districtActiveIndex === index
+                                ? "bg-primary text-white"
+                                : "hover:bg-base-200"
+                            }`}
                             onMouseEnter={() => setDistrictActiveIndex(index)}
                             onClick={() => {
                               selectDistrict(d);
@@ -393,17 +412,10 @@ const Register = () => {
                 </p>
               )}
 
-              {/* Upazila modal */}
+              {/* ✅ Upazila modal (FULL) */}
               <dialog id="upazila_modal" className="modal">
                 <div className="modal-box rounded-3xl">
-                  <h3 className="font-bold text-lg">
-                    Select Upazila{" "}
-                    <span className="text-base-content/60 font-normal">
-                      {selectedDistrictObj
-                        ? `• ${selectedDistrictObj.name}`
-                        : ""}
-                    </span>
-                  </h3>
+                  <h3 className="font-bold text-lg">Select Upazila</h3>
 
                   <input
                     className="input input-bordered w-full rounded-full mt-3"
@@ -444,12 +456,11 @@ const Register = () => {
                         <li key={u.id}>
                           <button
                             type="button"
-                            className={`w-full text-left px-4 py-3 rounded-2xl transition
-                              ${
-                                upazilaActiveIndex === index
-                                  ? "bg-primary text-white"
-                                  : "hover:bg-base-200"
-                              }`}
+                            className={`w-full text-left px-4 py-3 rounded-2xl transition ${
+                              upazilaActiveIndex === index
+                                ? "bg-primary text-white"
+                                : "hover:bg-base-200"
+                            }`}
                             onMouseEnter={() => setUpazilaActiveIndex(index)}
                             onClick={() => {
                               selectUpazila(u);
@@ -469,12 +480,6 @@ const Register = () => {
                           </button>
                         </li>
                       ))}
-
-                      {filteredUpazilas.length === 0 && (
-                        <li className="p-4 text-sm text-base-content/70">
-                          No upazila found.
-                        </li>
-                      )}
                     </ul>
                   </div>
 
@@ -576,14 +581,6 @@ const Register = () => {
             {serverError && (
               <p className="text-red-500 text-sm">{serverError}</p>
             )}
-
-            {/* <button
-              type="submit"
-              className="btn btn-primary w-full rounded-2xl"
-              disabled={uploading}
-            >
-              {uploading ? "Creating..." : "Register"}
-            </button> */}
 
             <LoadingButton
               type="submit"

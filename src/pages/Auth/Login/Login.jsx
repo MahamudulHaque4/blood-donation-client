@@ -1,43 +1,77 @@
 import React, { useContext, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import { AuthContext } from "../../../providers/AuthContext";
 import Logo from "../../../components/Logo/Logo";
+import axiosPublic from "../../../api/axiosPublic";
 
 const Login = () => {
-  const { signInUser, signInGoogle } = useContext(AuthContext);
+  const { signInUser } = useContext(AuthContext);
 
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setError("");
+
+    // ✅ remove old token first
+    localStorage.removeItem("access-token");
+
     setLoading(true);
 
-    const email = e.target.email.value;
+    const email = e.target.email.value.trim();
     const password = e.target.password.value;
 
-    try {
-      await signInUser(email, password);
-      navigate(location.state?.from || "/", { replace: true });
-    } catch (err) {
-      setError(err?.message || "Login failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+    // ✅ loading toast
+    const toastId = toast.loading("Logging in...");
 
-  const handleGoogleLogin = async () => {
-    setError("");
-    setLoading(true);
     try {
-      await signInGoogle();
+      // ✅ 1) Firebase login
+      await signInUser(email, password);
+
+      // ✅ 2) Get custom JWT from backend
+      const jwtRes = await axiosPublic.post("/jwt", { email });
+      const token = jwtRes?.data?.token;
+
+      if (!token) {
+        // ✅ don't show firebase errors; show clean message
+        throw new Error("Unable to create session token. Please try again.");
+      }
+
+      // ✅ 3) Save token
+      localStorage.setItem("access-token", token);
+
+      // ✅ 4) Success toast + Navigate
+      toast.success("Login successful!", { id: toastId });
       navigate(location.state?.from || "/", { replace: true });
     } catch (err) {
-      setError(err?.message || "Google login failed");
+      // ✅ Do NOT show firebase error messages
+      // Show clean, user-friendly messages only
+      const status = err?.response?.status;
+
+      // backend error message if you send friendly messages from server
+      const serverMsg = err?.response?.data?.message;
+
+      let message = "Login failed. Please try again.";
+
+      // Prefer server friendly message if exists
+      if (serverMsg && typeof serverMsg === "string") {
+        message = serverMsg;
+      } else if (status === 401) {
+        message = "Invalid email or password.";
+      } else if (status === 403) {
+        message = "Access denied. Please contact support.";
+      } else if (status >= 500) {
+        message = "Server error. Please try again later.";
+      } else if (
+        err?.message === "Unable to create session token. Please try again."
+      ) {
+        message = err.message;
+      }
+
+      toast.error(message, { id: toastId });
     } finally {
       setLoading(false);
     }
@@ -45,7 +79,7 @@ const Login = () => {
 
   return (
     <section className="min-h-screen flex items-center justify-center bg-base-200 px-6 py-12">
-      {/* soft bg */}
+      {/* soft background */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-24 -right-24 h-80 w-80 rounded-full bg-primary/15 blur-3xl" />
         <div className="absolute -bottom-24 -left-24 h-80 w-80 rounded-full bg-secondary/15 blur-3xl" />
@@ -53,6 +87,7 @@ const Login = () => {
 
       <div className="relative w-full max-w-md">
         <div className="rounded-3xl border border-base-300 bg-base-100/80 backdrop-blur p-6 md:p-8 shadow-sm">
+          {/* Header */}
           <div className="space-y-3 text-center flex flex-col items-center">
             <Logo />
             <div>
@@ -65,6 +100,7 @@ const Login = () => {
             </div>
           </div>
 
+          {/* Form */}
           <form onSubmit={handleLogin} className="mt-7 space-y-4">
             <div>
               <label className="label">
@@ -76,6 +112,7 @@ const Login = () => {
                 placeholder="Enter your email"
                 className="input input-bordered w-full rounded-2xl"
                 required
+                autoComplete="email"
               />
             </div>
 
@@ -89,6 +126,7 @@ const Login = () => {
                 placeholder="Enter your password"
                 className="input input-bordered w-full rounded-2xl"
                 required
+                autoComplete="current-password"
               />
 
               <div className="mt-2 text-right">
@@ -97,12 +135,6 @@ const Login = () => {
                 </Link>
               </div>
             </div>
-
-            {error && (
-              <div className="alert alert-error rounded-2xl">
-                <span className="text-sm">{error}</span>
-              </div>
-            )}
 
             <button
               type="submit"
@@ -120,26 +152,10 @@ const Login = () => {
             </button>
           </form>
 
-          {/* <div className="divider my-6">OR</div> */}
-
-          {/* <button
-            type="button"
-            onClick={handleGoogleLogin}
-            className="btn btn-outline w-full rounded-2xl flex items-center gap-2"
-            disabled={loading}
-          >
-            <img
-              src="https://img.icons8.com/color/48/google-logo.png"
-              alt="Google"
-              className="w-5 h-5"
-            />
-            Continue with Google
-          </button> */}
-
           <p className="mt-5 text-center text-sm text-base-content/70">
             Don’t have an account?{" "}
             <Link
-            state = {location.state}
+              state={location.state}
               to="/register"
               className="link link-hover text-primary font-semibold"
             >
