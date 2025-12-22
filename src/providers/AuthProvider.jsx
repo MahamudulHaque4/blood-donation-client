@@ -4,20 +4,17 @@ import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
   signInWithEmailAndPassword,
-  signInWithPopup,
   signOut,
   updateProfile,
-  GoogleAuthProvider,
 } from "firebase/auth";
 import { auth } from "../firebase/firebase.config";
 import axiosPublic from "../api/axiosPublic";
-
-const googleProvider = new GoogleAuthProvider();
 
 const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // ✅ Firebase
   const createUser = (email, password) => {
     setLoading(true);
     return createUserWithEmailAndPassword(auth, email, password);
@@ -26,11 +23,6 @@ const AuthProvider = ({ children }) => {
   const signInUser = (email, password) => {
     setLoading(true);
     return signInWithEmailAndPassword(auth, email, password);
-  };
-
-  const signInGoogle = () => {
-    setLoading(true);
-    return signInWithPopup(auth, googleProvider);
   };
 
   const updateUserProfile = (name, photo) => {
@@ -42,43 +34,55 @@ const AuthProvider = ({ children }) => {
 
   const logOut = async () => {
     setLoading(true);
-    // remove token first
     localStorage.removeItem("access-token");
     setUser(null);
     return signOut(auth);
   };
 
-  // ✅ Get custom JWT from backend and save to localStorage
-  const getJwtToken = async (email) => {
-    try {
-      const res = await axiosPublic.post("/jwt", { email });
-      const token = res.data?.token;
-      if (token) {
-        localStorage.setItem("access-token", token);
-      } else {
-        localStorage.removeItem("access-token");
-      }
-    } catch (err) {
-      // if backend says blocked / not found / etc.
-      localStorage.removeItem("access-token");
-      console.log("JWT error:", err?.response?.data || err.message);
-    }
+  // ✅ 1) Ensure user exists in DB (upsert)
+  const upsertUserToDB = async (firebaseUser) => {
+    const userPayload = {
+      name: firebaseUser?.displayName || "No Name",
+      email: firebaseUser?.email,
+      avatar: firebaseUser?.photoURL || "",
+    };
+
+    // ✅ safe: if already exists, it updates; if not, it inserts
+    await axiosPublic.put("/users", userPayload);
   };
 
-  // ✅ On auth state change
+  // ✅ 2) Get JWT
+  const getJwtToken = async (email) => {
+    const res = await axiosPublic.post("/jwt", { email });
+    const token = res.data?.token;
+
+    if (token) localStorage.setItem("access-token", token);
+    else localStorage.removeItem("access-token");
+
+    return token;
+  };
+
+  // ✅ Auth observer
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
 
-      if (currentUser?.email) {
-        // 🔥 get custom JWT after login
-        await getJwtToken(currentUser.email);
-      } else {
-        // if logged out
-        localStorage.removeItem("access-token");
-      }
+      try {
+        if (currentUser?.email) {
+          // ✅ First ensure DB user exists
+          await upsertUserToDB(currentUser);
 
-      setLoading(false);
+          // ✅ Then get JWT
+          await getJwtToken(currentUser.email);
+        } else {
+          localStorage.removeItem("access-token");
+        }
+      } catch (err) {
+        console.log("AuthProvider JWT/DB error:", err?.response?.data || err.message);
+        localStorage.removeItem("access-token");
+      } finally {
+        setLoading(false);
+      }
     });
 
     return () => unsubscribe();
@@ -91,7 +95,6 @@ const AuthProvider = ({ children }) => {
     setLoading,
     createUser,
     signInUser,
-    signInGoogle,
     logOut,
     updateUserProfile,
   };

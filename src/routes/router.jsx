@@ -17,6 +17,10 @@ import SearchDonors from "../pages/Donors/SearchDonors";
 import AllDonationRequests from "../pages/dashboard/AllDonationRequests";
 import VolunteerDashboardHome from "../pages/dashboard/VolunteerDashboardHome";
 import VolunteerRoute from "./VolunteerRoute";
+import AdminDashboardHome from "../pages/dashboard/admin/AdminDashboardHome";
+import AdminRoute from "./AdminRoute";
+import ManageUsers from "../pages/dashboard/admin/ManageUsers";
+import ManageDonationRequests from "../pages/dashboard/admin/ManageDonationRequest";
 
 export const router = createBrowserRouter([
   {
@@ -70,6 +74,31 @@ export const router = createBrowserRouter([
           <VolunteerRoute>
             <AllDonationRequests />
           </VolunteerRoute>
+        ),
+      },
+      //   Admin routes can be added here
+      {
+        path: "admin",
+        element: (
+          <AdminRoute>
+            <AdminDashboardHome />
+          </AdminRoute>
+        ),
+      },
+      {
+        path: "admin/users",
+        element: (
+          <AdminRoute>
+            <ManageUsers />
+          </AdminRoute>
+        ),
+      },
+      {
+        path: "admin/donation-requests",
+        element: (
+          <AdminRoute>
+            <ManageDonationRequests />
+          </AdminRoute>
         ),
       },
     ],
