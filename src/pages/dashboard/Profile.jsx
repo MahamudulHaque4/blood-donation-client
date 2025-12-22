@@ -3,13 +3,12 @@ import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import useAxiosSecure from "../../hooks/useAxiosSecure";
 import useAuth from "../../hooks/useAuth";
-import { imageUpload, bloodGroups } from "../../utils"; // adjust path if needed
-import axiosSecure from "../../api/axiosSecure";
+import { imageUpload, bloodGroups } from "../../utils"; 
+// import axiosSecure from "../../api/axiosSecure";
 
 const Profile = () => {
   const axiosSecure = useAxiosSecure();
-// axiosSecure.get(...)
-// axiosSecure.post(...)
+
 
   const { user, updateUserProfile } = useAuth();
 
@@ -60,14 +59,14 @@ const Profile = () => {
     try {
       setSaving(true);
 
-      // ✅ optional: upload new avatar
+      
       let avatarUrl = data.avatar || "";
       const file = data.avatarFile?.[0];
       if (file) {
         avatarUrl = await imageUpload(file);
       }
 
-      // ✅ update DB
+      //  update DB
       await axiosSecure.patch("/users/me", {
         name: data.name,
         avatar: avatarUrl,
@@ -76,7 +75,7 @@ const Profile = () => {
         upazila: data.upazila,
       });
 
-      // ✅ update firebase profile (for navbar avatar/name)
+     
       if (updateUserProfile) {
         await updateUserProfile(data.name, avatarUrl);
       }

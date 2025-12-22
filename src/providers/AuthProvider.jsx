@@ -14,7 +14,7 @@ const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Firebase
+  
   const createUser = (email, password) => {
     setLoading(true);
     return createUserWithEmailAndPassword(auth, email, password);
@@ -39,7 +39,7 @@ const AuthProvider = ({ children }) => {
     return signOut(auth);
   };
 
-  // ✅ 1) Ensure user exists in DB (upsert)
+  
   const upsertUserToDB = async (firebaseUser) => {
     const userPayload = {
       name: firebaseUser?.displayName || "No Name",
@@ -47,11 +47,11 @@ const AuthProvider = ({ children }) => {
       avatar: firebaseUser?.photoURL || "",
     };
 
-    // ✅ safe: if already exists, it updates; if not, it inserts
+    
     await axiosPublic.put("/users", userPayload);
   };
 
-  // ✅ 2) Get JWT
+ 
   const getJwtToken = async (email) => {
     const res = await axiosPublic.post("/jwt", { email });
     const token = res.data?.token;
@@ -62,17 +62,17 @@ const AuthProvider = ({ children }) => {
     return token;
   };
 
-  // ✅ Auth observer
+  
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
 
       try {
         if (currentUser?.email) {
-          // ✅ First ensure DB user exists
+          
           await upsertUserToDB(currentUser);
 
-          // ✅ Then get JWT
+          
           await getJwtToken(currentUser.email);
         } else {
           localStorage.removeItem("access-token");

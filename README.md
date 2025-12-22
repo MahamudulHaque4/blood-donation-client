@@ -1,16 +1,97 @@
-# React + Vite
+🩸 Blood Donation Platform
+🔗 Live URL
+👉 Live Site
+👉 Server API: https://your-server-url.com
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Purpose:
+The Blood Donation Platform is a full-stack web application designed to connect blood donors, patients, volunteers, and administrators in one secure system. It simplifies the process of creating blood donation requests, finding donors, managing requests, and collecting funding to support the platform. The system ensures role-based access control, data security, and an intuitive user experience.
 
-Currently, two official plugins are available:
+Key Features:
+Authentication & Roles
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Firebase authentication (Email/Password)
 
-## React Compiler
+Custom JWT-based authorization
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Role-based dashboards (Donor, Volunteer, Admin)
 
-## Expanding the ESLint configuration
+Protected routes for sensitive operations
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Donor Features:
+
+Create blood donation requests
+
+View and manage own donation requests
+
+Confirm donation for public requests
+
+Update donation status (done / canceled)
+
+Public Features:
+
+View public blood donation requests
+
+Search donors by blood group and location
+
+View request details
+
+Volunteer Features:
+
+Monitor all donation requests
+
+Update request statuses
+
+View platform statistics
+
+Admin Features:
+
+Manage users (role change, block/unblock)
+
+Manage all donation requests
+
+Approve or reject fundings
+
+View full platform statistics (donors, requests, funding)
+
+Funding System:
+
+Users can donate funds to support the platform
+
+Public funding list
+
+Admin approval workflow
+
+Funding statistics included in dashboard
+
+🧰 Technologies Used
+Frontend
+
+React
+
+React Router DOM
+
+Tailwind CSS
+
+DaisyUI
+
+Axios
+
+React Hot Toast
+
+Firebase Authentication
+
+Backend
+
+Node.js
+
+Express.js
+
+MongoDB (Native Driver)
+
+JSON Web Token (JWT)
+
+CORS
+
+dotenv
+
+NPM Packages Used

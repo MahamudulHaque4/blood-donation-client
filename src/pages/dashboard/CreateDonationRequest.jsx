@@ -2,11 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import useAuth from "../../hooks/useAuth";
-
-// ✅ public utils (bloodGroups + imageUpload)
 import { bloodGroups, imageUpload } from "../../utils";
-
-// ✅ secure axios to save to DB
 import axiosSecure from "../../api/axiosSecure";
 import { useNavigate } from "react-router-dom";
 
@@ -25,7 +21,7 @@ const CreateDonationRequest = () => {
   const [districtActiveIndex, setDistrictActiveIndex] = useState(0);
   const [upazilaActiveIndex, setUpazilaActiveIndex] = useState(0);
 
-  // ✅ image states
+
   const [imageFile, setImageFile] = useState(null);
   const [uploading, setUploading] = useState(false);
 
@@ -121,7 +117,7 @@ const CreateDonationRequest = () => {
 
   const isBlocked = user?.status === "blocked";
 
-  // ✅ NOW IT SAVES TO DB
+  
   const onSubmit = async (data) => {
     if (isBlocked) {
       toast.error("You are blocked. You cannot create donation requests.");
@@ -131,13 +127,11 @@ const CreateDonationRequest = () => {
     try {
       setUploading(true);
 
-      // ✅ upload image if selected
       let recipientImage = "";
       if (imageFile) {
         recipientImage = await imageUpload(imageFile);
       }
 
-      // ✅ payload must match BACKEND fields
       const payload = {
         recipientName: data.recipientName,
         recipientDistrict: selectedDistrictObj?.name || "",
@@ -154,20 +148,19 @@ const CreateDonationRequest = () => {
         recipientImage,
       };
 
-      // ✅ send to backend (JWT required)
+      
       const res = await axiosSecure.post("/donation-requests", payload);
 
       if (res?.data?.insertedId) toast.success("Donation request created!");
       else toast.success("Request submitted!");
 
-      // ✅ reset
+     
       reset();
       setValue("district", "");
       setValue("upazila", "");
       setImageFile(null);
 
-      // ✅ redirect to "My Donation Requests"
-      // make sure you already did: const navigate = useNavigate();
+
       setTimeout(() => {
         navigate("/dashboard/my-donation-requests");
       }, 600);

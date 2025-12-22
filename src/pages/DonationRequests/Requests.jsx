@@ -21,7 +21,7 @@ const StatusBadge = ({ status }) => {
 
 const Requests = () => {
   const navigate = useNavigate();
-  const { user } = useAuth(); // to check logged in
+  const { user } = useAuth(); 
 
   const [requests, setRequests] = useState([]);
   const [total, setTotal] = useState(0);

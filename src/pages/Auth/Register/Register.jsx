@@ -84,7 +84,7 @@ const Register = () => {
   const handleRegistration = async (data) => {
     setServerError("");
 
-    // ✅ Validate avatar before starting async flow
+    
     const file = data.avatar?.[0];
     if (!file) {
       setServerError("Avatar image is required");
@@ -94,16 +94,16 @@ const Register = () => {
     setUploading(true);
 
     try {
-      // ✅ 1) Create user in Firebase
+     
       await createUser(data.email, data.password);
 
-      // ✅ 2) Upload avatar to ImgBB
+    
       const avatarUrl = await imageUpload(file);
 
-      // ✅ 3) Update Firebase profile
+      
       await updateUserProfile(data.name, avatarUrl);
 
-      // ✅ 4) Save/Upsert user to DB (PUT /users)
+      
       const userPayload = {
         name: data.name,
         email: data.email,
@@ -115,7 +115,7 @@ const Register = () => {
 
       await axiosPublic.put("/users", userPayload);
 
-      // ✅ 5) Get Custom JWT from backend (POST /jwt)
+     
       const jwtRes = await axiosPublic.post("/jwt", { email: data.email });
       const token = jwtRes?.data?.token;
 
@@ -412,7 +412,7 @@ const Register = () => {
                 </p>
               )}
 
-              {/* ✅ Upazila modal (FULL) */}
+             
               <dialog id="upazila_modal" className="modal">
                 <div className="modal-box rounded-3xl">
                   <h3 className="font-bold text-lg">Select Upazila</h3>

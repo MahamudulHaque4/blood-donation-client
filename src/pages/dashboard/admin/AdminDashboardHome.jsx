@@ -80,16 +80,6 @@ const AdminDashboardHome = () => {
           <StatCard title="Total Requests" value={stats.totalRequests ?? 0} />
         </div>
       )}
-
-      {/* Tips */}
-      <div className="rounded-3xl border border-base-300 bg-base-100 p-6 shadow-sm">
-        <h2 className="font-extrabold text-lg">Quick Notes</h2>
-        <ul className="mt-3 list-disc pl-5 text-sm text-base-content/70 space-y-1">
-          <li>Blocked users can’t create/confirm donations or get JWT.</li>
-          <li>Donation status flow: pending → inprogress → done/canceled.</li>
-          <li>Admins can update any request status.</li>
-        </ul>
-      </div>
     </div>
   );
 };

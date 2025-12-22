@@ -1,7 +1,6 @@
 import React from "react";
 import { Outlet } from "react-router-dom";
-import DashboardSidebar from "../components/Sidebar/DashboardSidebar"; // adjust path if needed
-
+import DashboardSidebar from "../components/Sidebar/DashboardSidebar"; 
 const DashboardLayout = () => {
   return (
     <div className="min-h-screen flex">

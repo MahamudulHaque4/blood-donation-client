@@ -62,12 +62,12 @@ const ManageUsers = () => {
   useEffect(() => {
     setPage(1);
     load(1, statusFilter);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [statusFilter]);
 
   useEffect(() => {
     load(page, statusFilter);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [page]);
 
   const updateStatus = async (id, next) => {

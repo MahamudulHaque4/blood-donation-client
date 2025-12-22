@@ -7,7 +7,7 @@ const Contact = () => {
     e.preventDefault();
     setLoading(true);
 
-    // TODO: connect with EmailJS / backend API later
+    
     const form = e.target;
     const data = {
       name: form.name.value,

@@ -36,7 +36,7 @@ const ManageDonationRequests = () => {
     try {
       setLoading(true);
 
-      // ✅ FIXED ENDPOINT (backend must have /donation-requests/all)
+     
       const res = await axiosSecure.get("/donation-requests/all", {
         params: { page: p, limit, status: s || undefined },
       });
@@ -53,12 +53,12 @@ const ManageDonationRequests = () => {
   useEffect(() => {
     setPage(1);
     load(1, status);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [status]);
 
   useEffect(() => {
     load(page, status);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [page]);
 
   const updateStatus = async (id, nextStatus) => {

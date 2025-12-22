@@ -36,12 +36,12 @@ const AllDonationRequests = () => {
     try {
       setLoading(true);
 
-      // ✅ FIX: correct backend route for Volunteer/Admin
+      
       const res = await axiosSecure.get("/donation-requests/all", {
         params: { page: p, limit, status: s || undefined },
       });
 
-      // backend returns: { total, page, limit, data }
+ 
       setData(res.data?.data || []);
       setTotal(res.data?.total || 0);
     } catch (err) {
@@ -146,8 +146,7 @@ const AllDonationRequests = () => {
                     <td className="font-medium">
                       <Link
                         className="link link-hover"
-                        // ⚠️ this page route is protected in your router (verifyJWT),
-                        // so it may 401 for volunteers if your details page uses axiosPublic.
+                       
                         to={`/donation-requests/${r._id}`}
                       >
                         {r.recipientName}

@@ -24,12 +24,12 @@ const SkeletonCard = () => (
 );
 
 const SearchDonors = () => {
-  // API filters
+ 
   const [bloodGroup, setBloodGroup] = useState("");
   const [district, setDistrict] = useState("");
   const [upazila, setUpazila] = useState("");
 
-  // modal data
+ 
   const [districtsData, setDistrictsData] = useState([]);
   const [upazilasData, setUpazilasData] = useState([]);
 
@@ -41,20 +41,20 @@ const SearchDonors = () => {
   const [districtActiveIndex, setDistrictActiveIndex] = useState(0);
   const [upazilaActiveIndex, setUpazilaActiveIndex] = useState(0);
 
-  // results
+ 
   const [donors, setDonors] = useState([]);
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState("");
 
-  // premium UX states
+  
   const [copiedEmail, setCopiedEmail] = useState("");
-  const [imgErrorIds, setImgErrorIds] = useState({}); // { [id]: true }
+  const [imgErrorIds, setImgErrorIds] = useState({}); 
 
   const hasAnyFilter = useMemo(() => {
     return Boolean(bloodGroup || district.trim() || upazila.trim());
   }, [bloodGroup, district, upazila]);
 
-  // load bd data
+ 
   useEffect(() => {
     fetch("/data/districts.json")
       .then((res) => res.json())
@@ -177,7 +177,7 @@ const SearchDonors = () => {
   };
 
   const badgeClassForBlood = (bg) => {
-    // a tiny style mapping that looks premium on DaisyUI
+    
     if (!bg) return "badge badge-ghost";
     if (bg.startsWith("O")) return "badge badge-primary";
     if (bg.startsWith("A")) return "badge badge-secondary";
@@ -301,11 +301,11 @@ const SearchDonors = () => {
             </div>
           )}
 
-          {!hasAnyFilter && (
+          {/* {!hasAnyFilter && (
             <p className="mt-4 text-sm text-base-content/60">
               Tip: Choose district → choose upazila → Search.
             </p>
-          )}
+          )} */}
         </div>
 
         {/* Results */}
@@ -445,9 +445,6 @@ const SearchDonors = () => {
         </div>
       </div>
 
-      {/* =========================
-          District Modal
-      ========================= */}
       <dialog id="district_modal" className="modal">
         <div className="modal-box rounded-3xl">
           <h3 className="font-bold text-lg">Select District</h3>
@@ -536,9 +533,7 @@ const SearchDonors = () => {
         </button>
       </dialog>
 
-      {/* =========================
-          Upazila Modal
-      ========================= */}
+
       <dialog id="upazila_modal" className="modal">
         <div className="modal-box rounded-3xl">
           <h3 className="font-bold text-lg">

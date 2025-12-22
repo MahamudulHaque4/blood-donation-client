@@ -16,7 +16,6 @@ const Login = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    // ✅ remove old token first
     localStorage.removeItem("access-token");
 
     setLoading(true);
@@ -24,39 +23,32 @@ const Login = () => {
     const email = e.target.email.value.trim();
     const password = e.target.password.value;
 
-    // ✅ loading toast
     const toastId = toast.loading("Logging in...");
 
     try {
-      // ✅ 1) Firebase login
       await signInUser(email, password);
 
-      // ✅ 2) Get custom JWT from backend
       const jwtRes = await axiosPublic.post("/jwt", { email });
       const token = jwtRes?.data?.token;
 
       if (!token) {
-        // ✅ don't show firebase errors; show clean message
         throw new Error("Unable to create session token. Please try again.");
       }
 
-      // ✅ 3) Save token
       localStorage.setItem("access-token", token);
 
-      // ✅ 4) Success toast + Navigate
       toast.success("Login successful!", { id: toastId });
       navigate(location.state?.from || "/", { replace: true });
     } catch (err) {
-      // ✅ Do NOT show firebase error messages
-      // Show clean, user-friendly messages only
+
       const status = err?.response?.status;
 
-      // backend error message if you send friendly messages from server
+  
       const serverMsg = err?.response?.data?.message;
 
       let message = "Login failed. Please try again.";
 
-      // Prefer server friendly message if exists
+   
       if (serverMsg && typeof serverMsg === "string") {
         message = serverMsg;
       } else if (status === 401) {

@@ -24,7 +24,7 @@ const VolunteerRoute = ({ children }) => {
         const res = await axiosSecure.get("/users/me");
         const role = res.data?.role;
 
-        // ✅ allow volunteer + admin
+        
         setOk(role === "volunteer" || role === "admin");
       } catch (e) {
         setOk(false);

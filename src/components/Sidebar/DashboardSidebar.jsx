@@ -5,7 +5,8 @@ import useAuth from "../../hooks/useAuth";
 
 const DashboardSidebar = () => {
   const { user, loading } = useAuth();
-  const [role, setRole] = useState(null);
+
+  const [role, setRole] = useState(null); 
   const [roleLoading, setRoleLoading] = useState(true);
 
   const linkClass = ({ isActive }) =>
@@ -17,24 +18,34 @@ const DashboardSidebar = () => {
     let ignore = false;
 
     const loadRole = async () => {
-      try {
-        if (!user?.email) {
+      if (!user?.email) {
+        if (!ignore) {
           setRole(null);
           setRoleLoading(false);
-          return;
         }
+        return;
+      }
 
-        setRoleLoading(true);
+      try {
+        if (!ignore) setRoleLoading(true);
+
         const res = await axiosSecure.get("/users/me");
-        if (!ignore) setRole(res.data?.role || "donor");
+        const fetchedRole = res?.data?.role;
+
+        const validRoles = ["donor", "admin", "volunteer"];
+        const safeRole = validRoles.includes(fetchedRole) ? fetchedRole : null;
+
+        if (!ignore) setRole(safeRole);
       } catch (err) {
-        if (!ignore) setRole("donor");
+        
+        if (!ignore) setRole(null);
       } finally {
         if (!ignore) setRoleLoading(false);
       }
     };
 
     loadRole();
+
     return () => {
       ignore = true;
     };
@@ -57,7 +68,7 @@ const DashboardSidebar = () => {
     <aside className="w-64 bg-base-100 border-r border-base-300 min-h-screen p-4 flex flex-col">
       {/* Title */}
       <h2 className="text-xl font-extrabold mb-6 capitalize">
-        {role} Dashboard
+        {role ? `${role} Dashboard` : "Dashboard"}
       </h2>
 
       {/* Navigation */}
@@ -69,6 +80,10 @@ const DashboardSidebar = () => {
 
         <NavLink to="/dashboard/profile" className={linkClass}>
           Profile
+        </NavLink>
+
+        <NavLink to="/fundings" className={linkClass}>
+          Funding
         </NavLink>
 
         {/* DONOR */}
@@ -119,6 +134,9 @@ const DashboardSidebar = () => {
               className={linkClass}
             >
               Manage Requests
+            </NavLink>
+            <NavLink to="/dashboard/admin/fundings" className={linkClass}>
+              Manage Fundings
             </NavLink>
           </>
         )}

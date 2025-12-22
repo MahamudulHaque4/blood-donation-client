@@ -39,7 +39,7 @@ const RequestsDetails = () => {
     if (!data) return false;
     if (!myEmail) return false;
     if (data.status !== "pending") return false;
-    if (isOwner) return false; // ✅ block own request
+    if (isOwner) return false; 
     return true;
   }, [data, myEmail, isOwner]);
 
@@ -48,7 +48,7 @@ const RequestsDetails = () => {
       setLoading(true);
       setAuthRequired(false);
 
-      // ✅ If not logged in, don't call protected endpoint
+      
       if (!myEmail) {
         setAuthRequired(true);
         setData(null);

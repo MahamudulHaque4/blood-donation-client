@@ -21,6 +21,8 @@ import AdminDashboardHome from "../pages/dashboard/admin/AdminDashboardHome";
 import AdminRoute from "./AdminRoute";
 import ManageUsers from "../pages/dashboard/admin/ManageUsers";
 import ManageDonationRequests from "../pages/dashboard/admin/ManageDonationRequest";
+import Funding from "../pages/Funding/Funding";
+import ManageFundings from "../pages/dashboard/admin/ManageFundings";
 
 export const router = createBrowserRouter([
   {
@@ -29,15 +31,14 @@ export const router = createBrowserRouter([
     children: [
       { index: true, Component: Home },
 
-      // ✅ Public Requests Pages
       { path: "donation-requests", Component: Requests },
       { path: "donation-requests/:id", Component: RequestsDetails },
-      //   { path: "donors", Component: Donors },
       { path: "search-donors", Component: SearchDonors },
+      { path: "fundings", Component: Funding },
     ],
   },
 
-  // ✅ Auth Pages
+  
   {
     path: "/",
     Component: AuthLayout,
@@ -47,7 +48,7 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // ✅ Dashboard (private)
+  
   {
     path: "/dashboard",
     element: (
@@ -98,6 +99,14 @@ export const router = createBrowserRouter([
         element: (
           <AdminRoute>
             <ManageDonationRequests />
+          </AdminRoute>
+        ),
+      },
+      {
+        path: "admin/fundings",
+        element: (
+          <AdminRoute>
+            <ManageFundings />
           </AdminRoute>
         ),
       },
