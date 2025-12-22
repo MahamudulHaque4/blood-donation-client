@@ -10,9 +10,7 @@ const DashboardSidebar = () => {
 
   const linkClass = ({ isActive }) =>
     `block px-4 py-2 rounded-xl font-medium transition ${
-      isActive
-        ? "bg-primary text-white"
-        : "text-base-content hover:bg-base-200"
+      isActive ? "bg-primary text-white" : "text-base-content hover:bg-base-200"
     }`;
 
   useEffect(() => {
@@ -56,13 +54,14 @@ const DashboardSidebar = () => {
   }
 
   return (
-    <aside className="w-64 bg-base-100 border-r border-base-300 min-h-screen p-4">
+    <aside className="w-64 bg-base-100 border-r border-base-300 min-h-screen p-4 flex flex-col">
       {/* Title */}
       <h2 className="text-xl font-extrabold mb-6 capitalize">
         {role} Dashboard
       </h2>
 
-      <nav className="space-y-1">
+      {/* Navigation */}
+      <nav className="space-y-1 flex-1">
         {/* COMMON */}
         <NavLink to="/dashboard" end className={linkClass}>
           Dashboard Home
@@ -82,10 +81,7 @@ const DashboardSidebar = () => {
               Create Donation Request
             </NavLink>
 
-            <NavLink
-              to="/dashboard/my-donation-requests"
-              className={linkClass}
-            >
+            <NavLink to="/dashboard/my-donation-requests" className={linkClass}>
               My Donation Requests
             </NavLink>
           </>
@@ -94,16 +90,12 @@ const DashboardSidebar = () => {
         {/* VOLUNTEER */}
         {role === "volunteer" && (
           <>
-            <NavLink
-              to="/dashboard/volunteer"
-              end
-              className={linkClass}
-            >
+            <NavLink to="/dashboard/volunteer" end className={linkClass}>
               Volunteer Home
             </NavLink>
 
             <NavLink
-              to="/dashboard/volunteer/donation-requests"
+              to="/dashboard/all-donation-requests"
               className={linkClass}
             >
               Manage Requests
@@ -114,18 +106,11 @@ const DashboardSidebar = () => {
         {/* ADMIN */}
         {role === "admin" && (
           <>
-            <NavLink
-              to="/dashboard/admin"
-              end
-              className={linkClass}
-            >
+            <NavLink to="/dashboard/admin" end className={linkClass}>
               Admin Home
             </NavLink>
 
-            <NavLink
-              to="/dashboard/admin/users"
-              className={linkClass}
-            >
+            <NavLink to="/dashboard/admin/users" className={linkClass}>
               Manage Users
             </NavLink>
 
@@ -138,6 +123,17 @@ const DashboardSidebar = () => {
           </>
         )}
       </nav>
+
+      {/* Divider */}
+      <div className="my-4 border-t border-base-300" />
+
+      {/* Back to Home */}
+      <NavLink
+        to="/"
+        className="block px-4 py-2 rounded-xl font-medium transition text-base-content hover:bg-base-200"
+      >
+        ← Back to Home
+      </NavLink>
     </aside>
   );
 };

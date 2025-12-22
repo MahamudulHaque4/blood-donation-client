@@ -33,7 +33,7 @@ export const router = createBrowserRouter([
       { path: "donation-requests", Component: Requests },
       { path: "donation-requests/:id", Component: RequestsDetails },
       //   { path: "donors", Component: Donors },
-      { path: "donors", Component: SearchDonors },
+      { path: "search-donors", Component: SearchDonors },
     ],
   },
 

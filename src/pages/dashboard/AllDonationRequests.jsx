@@ -27,25 +27,35 @@ const AllDonationRequests = () => {
 
   const [loading, setLoading] = useState(true);
 
-  const totalPages = useMemo(() => Math.max(Math.ceil(total / limit), 1), [total]);
+  const totalPages = useMemo(
+    () => Math.max(Math.ceil(total / limit), 1),
+    [total]
+  );
 
   const load = async (p = page, s = status) => {
     try {
       setLoading(true);
-      const res = await axiosSecure.get("/admin/donation-requests", {
+
+      // ✅ FIX: correct backend route for Volunteer/Admin
+      const res = await axiosSecure.get("/donation-requests/all", {
         params: { page: p, limit, status: s || undefined },
       });
 
+      // backend returns: { total, page, limit, data }
       setData(res.data?.data || []);
       setTotal(res.data?.total || 0);
     } catch (err) {
+      console.error(err);
       toast.error(err?.response?.data?.message || "Failed to load all requests");
+      setData([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    setPage(1);
     load(1, status);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
@@ -57,10 +67,13 @@ const AllDonationRequests = () => {
 
   const updateStatus = async (id, nextStatus) => {
     try {
-      await axiosSecure.patch(`/donation-requests/${id}/status`, { status: nextStatus });
+      await axiosSecure.patch(`/donation-requests/${id}/status`, {
+        status: nextStatus,
+      });
       toast.success(`Updated to ${nextStatus}`);
       load(page, status);
     } catch (err) {
+      console.error(err);
       toast.error(err?.response?.data?.message || "Status update failed");
     }
   };
@@ -70,7 +83,9 @@ const AllDonationRequests = () => {
       <div className="rounded-3xl border border-base-300 bg-base-100 p-5 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center gap-4 md:justify-between">
           <div>
-            <h1 className="text-2xl md:text-3xl font-extrabold">All Donation Requests</h1>
+            <h1 className="text-2xl md:text-3xl font-extrabold">
+              All Donation Requests
+            </h1>
             <p className="text-sm text-base-content/70 mt-1">
               Volunteer/Admin can monitor and update request status.
             </p>
@@ -80,10 +95,7 @@ const AllDonationRequests = () => {
             <select
               className="select select-bordered rounded-2xl"
               value={status}
-              onChange={(e) => {
-                setPage(1);
-                setStatus(e.target.value);
-              }}
+              onChange={(e) => setStatus(e.target.value)}
             >
               <option value="">All Status</option>
               <option value="pending">pending</option>
@@ -132,7 +144,12 @@ const AllDonationRequests = () => {
                 {data.map((r) => (
                   <tr key={r._id} className="hover">
                     <td className="font-medium">
-                      <Link className="link link-hover" to={`/donation-requests/${r._id}`}>
+                      <Link
+                        className="link link-hover"
+                        // ⚠️ this page route is protected in your router (verifyJWT),
+                        // so it may 401 for volunteers if your details page uses axiosPublic.
+                        to={`/donation-requests/${r._id}`}
+                      >
                         {r.recipientName}
                       </Link>
                     </td>
@@ -141,24 +158,32 @@ const AllDonationRequests = () => {
                       <div className="text-sm">
                         {r.recipientDistrict} • {r.recipientUpazila}
                       </div>
-                      <div className="text-xs text-base-content/60">{r.hospitalName}</div>
+                      <div className="text-xs text-base-content/60">
+                        {r.hospitalName}
+                      </div>
                     </td>
                     <td>
                       <div className="text-sm">{r.donationDate}</div>
-                      <div className="text-xs text-base-content/60">{r.donationTime}</div>
+                      <div className="text-xs text-base-content/60">
+                        {r.donationTime}
+                      </div>
                     </td>
                     <td>
                       <StatusBadge status={r.status} />
                     </td>
                     <td className="text-sm">
                       <div className="font-medium">{r.requesterName || "—"}</div>
-                      <div className="text-xs text-base-content/60">{r.requesterEmail || "—"}</div>
+                      <div className="text-xs text-base-content/60">
+                        {r.requesterEmail || "—"}
+                      </div>
                     </td>
                     <td className="text-sm">
                       {r?.donor?.name ? (
                         <>
                           <div className="font-medium">{r.donor.name}</div>
-                          <div className="text-xs text-base-content/60">{r.donor.email}</div>
+                          <div className="text-xs text-base-content/60">
+                            {r.donor.email}
+                          </div>
                         </>
                       ) : (
                         <span className="text-base-content/60">—</span>
@@ -195,7 +220,9 @@ const AllDonationRequests = () => {
                         )}
 
                         {(r.status === "done" || r.status === "canceled") && (
-                          <span className="text-xs text-base-content/60">No actions</span>
+                          <span className="text-xs text-base-content/60">
+                            No actions
+                          </span>
                         )}
                       </div>
                     </td>

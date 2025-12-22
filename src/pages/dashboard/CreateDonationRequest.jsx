@@ -1,13 +1,20 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
-import useAuth from "../../hooks/useAuth"; // adjust path if needed
+import useAuth from "../../hooks/useAuth";
 
-// ✅ import these from your utils file where you wrote imageUpload
-import { bloodGroups, imageUpload } from "../../utils"; // <-- adjust path
+// ✅ public utils (bloodGroups + imageUpload)
+import { bloodGroups, imageUpload } from "../../utils";
+
+// ✅ secure axios to save to DB
+import axiosSecure from "../../api/axiosSecure";
+import { useNavigate } from "react-router-dom";
+
 
 const CreateDonationRequest = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+
 
   const [districtsData, setDistrictsData] = useState([]);
   const [upazilasData, setUpazilasData] = useState([]);
@@ -112,19 +119,14 @@ const CreateDonationRequest = () => {
     setValue("upazila", u.name);
   };
 
-  // If later you store status in DB and load it into context, this will work.
   const isBlocked = user?.status === "blocked";
 
-  // ✅ make submit async because we will upload image
+  // ✅ NOW IT SAVES TO DB
   const onSubmit = async (data) => {
     if (isBlocked) {
       toast.error("You are blocked. You cannot create donation requests.");
       return;
     }
-
-    // ✅ optional/required image rule (choose what you want)
-    // If you want image REQUIRED, uncomment:
-    // if (!imageFile) return toast.error("Please upload a recipient image.");
 
     try {
       setUploading(true);
@@ -135,39 +137,43 @@ const CreateDonationRequest = () => {
         recipientImage = await imageUpload(imageFile);
       }
 
-      // Build payload according to requirement (status must be pending initially)
+      // ✅ payload must match BACKEND fields
       const payload = {
-        requesterName: user?.displayName || "Unknown",
-        requesterEmail: user?.email || "Unknown",
-
         recipientName: data.recipientName,
-        recipientImage, // ✅ added
-
-        bloodGroup: data.bloodGroup,
         recipientDistrict: selectedDistrictObj?.name || "",
         recipientUpazila: data.upazila,
+
         hospitalName: data.hospitalName,
-        fullAddress: data.fullAddress,
+        address: data.fullAddress,
+
+        bloodGroup: data.bloodGroup,
         donationDate: data.donationDate,
         donationTime: data.donationTime,
-        requestMessage: data.requestMessage,
 
-        status: "pending",
-        donorName: null,
-        donorEmail: null,
-        createdAt: new Date().toISOString(),
+        message: data.requestMessage,
+        recipientImage,
       };
 
-      console.log("✅ Donation Request Payload (NOT sent to DB yet):", payload);
-      toast.success("Donation request created (image uploaded).");
+      // ✅ send to backend (JWT required)
+      const res = await axiosSecure.post("/donation-requests", payload);
 
-      // reset form
+      if (res?.data?.insertedId) toast.success("Donation request created!");
+      else toast.success("Request submitted!");
+
+      // ✅ reset
       reset();
       setValue("district", "");
       setValue("upazila", "");
       setImageFile(null);
+
+      // ✅ redirect to "My Donation Requests"
+      // make sure you already did: const navigate = useNavigate();
+      setTimeout(() => {
+        navigate("/dashboard/my-donation-requests");
+      }, 600);
     } catch (err) {
-      toast.error(err?.message || "Something went wrong");
+      console.error(err);
+      toast.error(err?.response?.data?.message || "Failed to create request");
     } finally {
       setUploading(false);
     }
@@ -209,7 +215,7 @@ const CreateDonationRequest = () => {
               )}
             </div>
 
-            {/* ✅ Recipient Image */}
+            {/* Recipient Image */}
             <div>
               <label className="label">Recipient Image (optional)</label>
               <input
@@ -261,7 +267,9 @@ const CreateDonationRequest = () => {
                 onClick={openDistrictModal}
               >
                 <span className="truncate">
-                  {selectedDistrictObj ? selectedDistrictObj.name : "Select district"}
+                  {selectedDistrictObj
+                    ? selectedDistrictObj.name
+                    : "Select district"}
                 </span>
                 <span className="opacity-60">Search</span>
               </button>
@@ -302,7 +310,9 @@ const CreateDonationRequest = () => {
                           );
                         }
                         if (e.key === "ArrowUp") {
-                          setDistrictActiveIndex((prev) => Math.max(prev - 1, 0));
+                          setDistrictActiveIndex((prev) =>
+                            Math.max(prev - 1, 0)
+                          );
                         }
                         if (e.key === "Enter") {
                           const d = filteredDistricts[districtActiveIndex];
@@ -325,7 +335,9 @@ const CreateDonationRequest = () => {
                             onMouseEnter={() => setDistrictActiveIndex(index)}
                             onClick={() => {
                               selectDistrict(d);
-                              document.getElementById("district_modal")?.close();
+                              document
+                                .getElementById("district_modal")
+                                ?.close();
                             }}
                           >
                             <div className="font-medium">{d.name}</div>
@@ -360,7 +372,9 @@ const CreateDonationRequest = () => {
                 <button
                   type="button"
                   className="modal-backdrop"
-                  onClick={() => document.getElementById("district_modal")?.close()}
+                  onClick={() =>
+                    document.getElementById("district_modal")?.close()
+                  }
                 >
                   close
                 </button>
@@ -402,7 +416,9 @@ const CreateDonationRequest = () => {
                   <h3 className="font-bold text-lg">
                     Select Upazila{" "}
                     <span className="text-base-content/60 font-normal">
-                      {selectedDistrictObj ? `• ${selectedDistrictObj.name}` : ""}
+                      {selectedDistrictObj
+                        ? `• ${selectedDistrictObj.name}`
+                        : ""}
                     </span>
                   </h3>
 
@@ -482,7 +498,9 @@ const CreateDonationRequest = () => {
                     <button
                       type="button"
                       className="btn rounded-2xl"
-                      onClick={() => document.getElementById("upazila_modal")?.close()}
+                      onClick={() =>
+                        document.getElementById("upazila_modal")?.close()
+                      }
                     >
                       Close
                     </button>
@@ -492,7 +510,9 @@ const CreateDonationRequest = () => {
                 <button
                   type="button"
                   className="modal-backdrop"
-                  onClick={() => document.getElementById("upazila_modal")?.close()}
+                  onClick={() =>
+                    document.getElementById("upazila_modal")?.close()
+                  }
                 >
                   close
                 </button>
@@ -505,7 +525,9 @@ const CreateDonationRequest = () => {
               <input
                 className="input input-bordered w-full"
                 placeholder="e.g., Dhaka Medical College Hospital"
-                {...register("hospitalName", { required: "Hospital name is required" })}
+                {...register("hospitalName", {
+                  required: "Hospital name is required",
+                })}
               />
               {errors.hospitalName && (
                 <p className="text-red-500 text-sm mt-1">
@@ -520,7 +542,9 @@ const CreateDonationRequest = () => {
               <input
                 className="input input-bordered w-full"
                 placeholder="Full address (road, area, etc.)"
-                {...register("fullAddress", { required: "Full address is required" })}
+                {...register("fullAddress", {
+                  required: "Full address is required",
+                })}
               />
               {errors.fullAddress && (
                 <p className="text-red-500 text-sm mt-1">
@@ -536,7 +560,9 @@ const CreateDonationRequest = () => {
                 <input
                   type="date"
                   className="input input-bordered w-full"
-                  {...register("donationDate", { required: "Donation date is required" })}
+                  {...register("donationDate", {
+                    required: "Donation date is required",
+                  })}
                 />
                 {errors.donationDate && (
                   <p className="text-red-500 text-sm mt-1">
@@ -550,7 +576,9 @@ const CreateDonationRequest = () => {
                 <input
                   type="time"
                   className="input input-bordered w-full"
-                  {...register("donationTime", { required: "Donation time is required" })}
+                  {...register("donationTime", {
+                    required: "Donation time is required",
+                  })}
                 />
                 {errors.donationTime && (
                   <p className="text-red-500 text-sm mt-1">
@@ -566,7 +594,9 @@ const CreateDonationRequest = () => {
               <textarea
                 className="textarea textarea-bordered w-full min-h-[120px]"
                 placeholder="Write why blood is needed, patient info, emergency note..."
-                {...register("requestMessage", { required: "Request message is required" })}
+                {...register("requestMessage", {
+                  required: "Request message is required",
+                })}
               />
               {errors.requestMessage && (
                 <p className="text-red-500 text-sm mt-1">
