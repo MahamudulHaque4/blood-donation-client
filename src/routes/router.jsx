@@ -12,8 +12,11 @@ import CreateDonationRequest from "../pages/Dashboard/CreateDonationRequest";
 import PrivateRoute from "./PrivateRoute.Jsx";
 import Requests from "../pages/DonationRequests/Requests";
 import RequestsDetails from "../pages/DonationRequests/RequestsDetails";
-import Donors from "../pages/Donors/Donors";
+// import Donors from "../pages/Donors/Donors";
 import SearchDonors from "../pages/Donors/SearchDonors";
+import AllDonationRequests from "../pages/dashboard/AllDonationRequests";
+import VolunteerDashboardHome from "../pages/dashboard/VolunteerDashboardHome";
+import VolunteerRoute from "./VolunteerRoute";
 
 export const router = createBrowserRouter([
   {
@@ -25,7 +28,7 @@ export const router = createBrowserRouter([
       // ✅ Public Requests Pages
       { path: "donation-requests", Component: Requests },
       { path: "donation-requests/:id", Component: RequestsDetails },
-    //   { path: "donors", Component: Donors },
+      //   { path: "donors", Component: Donors },
       { path: "donors", Component: SearchDonors },
     ],
   },
@@ -53,6 +56,22 @@ export const router = createBrowserRouter([
       { path: "profile", element: <Profile /> },
       { path: "create-donation-request", element: <CreateDonationRequest /> },
       { path: "my-donation-requests", element: <MyDonationRequest /> },
+      {
+        path: "volunteer",
+        element: (
+          <VolunteerRoute>
+            <VolunteerDashboardHome />
+          </VolunteerRoute>
+        ),
+      },
+      {
+        path: "all-donation-requests",
+        element: (
+          <VolunteerRoute>
+            <AllDonationRequests />
+          </VolunteerRoute>
+        ),
+      },
     ],
   },
 ]);

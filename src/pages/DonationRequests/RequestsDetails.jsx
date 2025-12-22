@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import axiosSecure from "../../api/axiosSecure";
@@ -27,15 +27,34 @@ const RequestsDetails = () => {
 
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
-
   const [authRequired, setAuthRequired] = useState(false);
+
+  const myEmail = user?.email || "";
+
+  const isOwner = useMemo(() => {
+    return data?.requesterEmail && myEmail && data.requesterEmail === myEmail;
+  }, [data?.requesterEmail, myEmail]);
+
+  const canConfirm = useMemo(() => {
+    if (!data) return false;
+    if (!myEmail) return false;
+    if (data.status !== "pending") return false;
+    if (isOwner) return false; // ✅ block own request
+    return true;
+  }, [data, myEmail, isOwner]);
 
   const load = async () => {
     try {
       setLoading(true);
       setAuthRequired(false);
 
-      // ✅ Your backend requires JWT for this route, so we must use axiosSecure
+      // ✅ If not logged in, don't call protected endpoint
+      if (!myEmail) {
+        setAuthRequired(true);
+        setData(null);
+        return;
+      }
+
       const res = await axiosSecure.get(`/donation-requests/${id}`);
       setData(res.data);
     } catch (err) {
@@ -60,12 +79,17 @@ const RequestsDetails = () => {
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, myEmail]);
 
   const handleConfirmDonate = async () => {
-    if (!user?.email) {
+    if (!myEmail) {
       toast.error("Please login to donate.");
       navigate("/login", { state: { from: location.pathname } });
+      return;
+    }
+
+    if (isOwner) {
+      toast.error("You cannot donate to your own request.");
       return;
     }
 
@@ -109,20 +133,18 @@ const RequestsDetails = () => {
         </div>
       </div>
 
-      {/* If auth required */}
+      {/* Auth required */}
       {authRequired && (
         <div className="rounded-3xl border border-base-300 bg-base-100 p-8 shadow-sm text-center">
           <h2 className="text-xl font-extrabold">Login required</h2>
           <p className="text-sm text-base-content/70 mt-2">
-            Your backend protects request details. Please login to view full details.
+            Please login to view request details and confirm donation.
           </p>
 
           <div className="mt-5 flex justify-center gap-3">
             <button
               className="btn btn-primary rounded-2xl"
-              onClick={() =>
-                navigate("/login", { state: { from: location.pathname } })
-              }
+              onClick={() => navigate("/login", { state: { from: location.pathname } })}
             >
               Login
             </button>
@@ -133,7 +155,7 @@ const RequestsDetails = () => {
         </div>
       )}
 
-      {/* Loading state */}
+      {/* Loading */}
       {loading && !authRequired && (
         <div className="rounded-3xl border border-base-300 bg-base-100 p-6">
           <div className="skeleton h-7 w-1/2 mb-3" />
@@ -145,7 +167,7 @@ const RequestsDetails = () => {
       {/* Details */}
       {!loading && !authRequired && data && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* Left: main info */}
+          {/* Left */}
           <div className="lg:col-span-2 rounded-3xl border border-base-300 bg-base-100 p-6 shadow-sm space-y-5">
             <div className="flex flex-wrap gap-3">
               <div className="rounded-2xl bg-base-200 px-4 py-3">
@@ -178,26 +200,42 @@ const RequestsDetails = () => {
             </div>
           </div>
 
-          {/* Right: actions */}
+          {/* Right */}
           <div className="rounded-3xl border border-base-300 bg-base-100 p-6 shadow-sm space-y-4">
             <h3 className="text-lg font-extrabold">Actions</h3>
 
             <button
               onClick={handleConfirmDonate}
               className="btn btn-primary w-full rounded-2xl"
-              disabled={data.status !== "pending"}
-              title={data.status !== "pending" ? "Only pending can be confirmed" : ""}
+              disabled={!canConfirm}
+              title={
+                !myEmail
+                  ? "Login required"
+                  : isOwner
+                  ? "You cannot donate to your own request"
+                  : data.status !== "pending"
+                  ? "Only pending can be confirmed"
+                  : ""
+              }
             >
               Donate / Confirm
             </button>
 
-            {data.status !== "pending" && (
+            {!canConfirm && (
               <p className="text-xs text-base-content/60">
-                This request is <b>{data.status}</b>. Confirm is only available when status is <b>pending</b>.
+                {isOwner ? (
+                  <>You created this request, so you can’t donate to it.</>
+                ) : data.status !== "pending" ? (
+                  <>
+                    This request is <b>{data.status}</b>. Confirm is only available when status is{" "}
+                    <b>pending</b>.
+                  </>
+                ) : (
+                  <>Login required.</>
+                )}
               </p>
             )}
 
-            {/* Donor info (if inprogress) */}
             <div className="divider" />
 
             <h4 className="font-bold">Donor</h4>
